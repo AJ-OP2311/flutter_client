@@ -73,9 +73,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: MediaQuery(
-          data: const MediaQueryData(
-            size: Size(400, 800),
-          ),
+          data: const MediaQueryData(size: Size(400, 800)),
           child: RawGestureDetector(
             behavior: HitTestBehavior.opaque,
             gestures: <Type, GestureRecognizerFactory>{
@@ -166,9 +164,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: MediaQuery(
-          data: const MediaQueryData(
-            size: Size(400, 800),
-          ),
+          data: const MediaQueryData(size: Size(400, 800)),
           child: RawGestureDetector(
             behavior: HitTestBehavior.opaque,
             gestures: <Type, GestureRecognizerFactory>{
@@ -225,9 +221,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: MediaQuery(
-          data: const MediaQueryData(
-            size: Size(400, 800),
-          ),
+          data: const MediaQueryData(size: Size(400, 800)),
           child: RawGestureDetector(
             behavior: HitTestBehavior.opaque,
             gestures: <Type, GestureRecognizerFactory>{
