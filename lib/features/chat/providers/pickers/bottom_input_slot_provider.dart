@@ -28,7 +28,7 @@ class BottomInputSlotState {
 @Riverpod()
 class BottomInputSlot extends _$BottomInputSlot {
   Timer? _transitionTimeout;
-  double _heldSlotHeight = 0;
+  double? _heldSlotHeightOverride;
 
   @override
   BottomInputSlotState build() {
@@ -169,15 +169,15 @@ class BottomInputSlot extends _$BottomInputSlot {
   }
 
   void holdSlotHeight(double height) {
-    _heldSlotHeight = quantizeBottomInputHeight(height);
+    _heldSlotHeightOverride = quantizeBottomInputHeight(height);
     state = _resolveState();
   }
 
   void clearHeldSlotHeight() {
-    if (_heldSlotHeight <= 0) {
+    if (_heldSlotHeightOverride == null) {
       return;
     }
-    _heldSlotHeight = 0;
+    _heldSlotHeightOverride = null;
     state = _resolveState();
   }
 
@@ -242,7 +242,7 @@ class BottomInputSlot extends _$BottomInputSlot {
       liveKeyboardHeight: metrics.liveKeyboardHeight,
       isKeyboardVisible: metrics.isKeyboardVisible,
       safeAreaBottom: metrics.safeAreaBottom,
-      heldSlotHeight: _heldSlotHeight,
+      heldSlotHeightOverride: _heldSlotHeightOverride,
     );
     return BottomInputSlotState(
       mode: resolvedMode,

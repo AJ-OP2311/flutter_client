@@ -481,9 +481,26 @@ void main() {
           liveKeyboardHeight: 0,
           isKeyboardVisible: false,
           safeAreaBottom: 34,
-          heldSlotHeight: 302,
+          heldSlotHeightOverride: 302,
         ),
         302,
+      );
+    });
+
+    test('held slot height override can collapse to zero', () {
+      expect(
+        resolveBottomInputSlotHeight(
+          isPanelOpen: true,
+          transition: BottomInputTransition.idle,
+          lockedHeight: 0,
+          anchorHeight: 336,
+          panelHeight: 336,
+          liveKeyboardHeight: 0,
+          isKeyboardVisible: false,
+          safeAreaBottom: 34,
+          heldSlotHeightOverride: 0,
+        ),
+        0,
       );
     });
 

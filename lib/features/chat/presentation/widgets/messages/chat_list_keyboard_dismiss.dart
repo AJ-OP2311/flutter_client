@@ -2,14 +2,19 @@ import 'package:flutter/gestures.dart';
 import 'package:fluxer_app/material_ui.dart';
 import 'package:fluxer_app/shared/gestures/directional_horizontal_drag_recognizer.dart';
 
-/// Dismisses the keyboard on a tap or vertical scroll of the message list.
+/// Dismisses the keyboard and optional composer panels on list tap or scroll.
 ///
 /// A clear leftward swipe keeps the current focus so the IME does not hide
 /// and restore mid-gesture.
 class ChatListKeyboardDismiss extends StatefulWidget {
-  const ChatListKeyboardDismiss({required this.child, super.key});
+  const ChatListKeyboardDismiss({
+    required this.child,
+    this.onDismissPanels,
+    super.key,
+  });
 
   final Widget child;
+  final VoidCallback? onDismissPanels;
 
   @override
   State<ChatListKeyboardDismiss> createState() =>
@@ -19,8 +24,9 @@ class ChatListKeyboardDismiss extends StatefulWidget {
 class _ChatListKeyboardDismissState extends State<ChatListKeyboardDismiss> {
   _TrackedPointer? _tracked;
 
-  void _dismissKeyboard() {
+  void _handleListInteraction() {
     FocusManager.instance.primaryFocus?.unfocus();
+    widget.onDismissPanels?.call();
   }
 
   void _onPointerDown(PointerDownEvent event) {
@@ -60,7 +66,7 @@ class _ChatListKeyboardDismissState extends State<ChatListKeyboardDismiss> {
     )) {
       return;
     }
-    _dismissKeyboard();
+    _handleListInteraction();
   }
 
   void _onPointerUp(PointerUpEvent event) {
@@ -69,7 +75,7 @@ class _ChatListKeyboardDismissState extends State<ChatListKeyboardDismiss> {
       return;
     }
     if (!tracked.settled) {
-      _dismissKeyboard();
+      _handleListInteraction();
     }
     _tracked = null;
   }
