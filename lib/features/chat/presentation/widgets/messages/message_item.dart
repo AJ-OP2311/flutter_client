@@ -16,6 +16,7 @@ import 'package:fluxer_app/features/chat/presentation/widgets/embeds/embed_image
 import 'package:fluxer_app/features/chat/presentation/widgets/embeds/embed_invite.dart';
 import 'package:fluxer_app/features/chat/presentation/widgets/embeds/embed_link.dart';
 import 'package:fluxer_app/features/chat/presentation/widgets/embeds/embed_rich.dart';
+import 'package:fluxer_app/features/chat/presentation/widgets/embeds/embed_spoiler_wrap.dart';
 import 'package:fluxer_app/features/chat/presentation/widgets/embeds/embed_theme.dart';
 import 'package:fluxer_app/features/chat/presentation/widgets/embeds/embed_video.dart';
 import 'package:fluxer_app/features/chat/presentation/widgets/media/embed_animated_image.dart';
@@ -33,7 +34,6 @@ import 'package:fluxer_app/features/chat/presentation/widgets/messages/message_m
 import 'package:fluxer_app/features/chat/presentation/widgets/messages/message_reactions_bar.dart';
 import 'package:fluxer_app/features/chat/presentation/widgets/messages/message_row_layout.dart';
 import 'package:fluxer_app/features/chat/presentation/widgets/messages/message_translation_indicator.dart';
-import 'package:fluxer_app/features/chat/presentation/widgets/messages/spoiler_overlay.dart';
 import 'package:fluxer_app/features/chat/presentation/widgets/pickers/expression_picker.dart';
 import 'package:fluxer_app/features/chat/providers/core/chat_view_model.dart';
 import 'package:fluxer_app/features/chat/providers/messages/channel_spoiler_sync_provider.dart';
@@ -1049,7 +1049,6 @@ class _MessageItemState extends ConsumerState<MessageItem> {
       dim: dimMessagePartsExceptAttachments,
       child: child,
     );
-    final spoileredUrls = extractSpoileredUrls(msg.content);
     final attachmentSize = msg.hasCompactAttachments
         ? MediaDimensionSize.small
         : chatPreferences.attachmentMediaDimensionSize;
@@ -1120,9 +1119,10 @@ class _MessageItemState extends ConsumerState<MessageItem> {
               .map((entry) {
                 final int embedIndex = entry.$1;
                 final embed = entry.$2;
-                final spoilerSyncKeys = spoilerSyncKeysForEmbed(
-                  embed,
-                  spoileredUrls,
+                final spoilerSyncKeys = spoilerSyncKeysForMessageEmbed(
+                  messageContent: msg.content,
+                  embed: embed,
+                  messageEmbeds: msg.embeds,
                 );
                 return wrapPart(
                   _buildEmbed(
@@ -1946,10 +1946,6 @@ class _MessageItemState extends ConsumerState<MessageItem> {
       EmbedType.image || EmbedType.gifv => EmbedImage(
         embed: embed,
         dimensionSize: dimensionSize,
-        isSpoiler: isSpoiler,
-        revealSpoiler: revealSpoilers,
-        spoilerSyncController: _spoilerSyncController,
-        spoilerSyncKeys: spoilerSyncKeys,
         channelId: channelId,
         messageId: messageId,
         embedIndex: embedIndex,
@@ -1968,10 +1964,6 @@ class _MessageItemState extends ConsumerState<MessageItem> {
       EmbedType.video => EmbedVideo(
         embed: embed,
         dimensionSize: dimensionSize,
-        isSpoiler: isSpoiler,
-        revealSpoiler: revealSpoilers,
-        spoilerSyncController: _spoilerSyncController,
-        spoilerSyncKeys: spoilerSyncKeys,
         channelId: channelId,
         messageId: messageId,
         embedIndex: embedIndex,
@@ -1981,18 +1973,14 @@ class _MessageItemState extends ConsumerState<MessageItem> {
 
     return Padding(
       padding: const EdgeInsets.only(top: 2),
-      child:
-          embed.type == EmbedType.image ||
-              embed.type == EmbedType.gifv ||
-              embed.type == EmbedType.video
-          ? child
-          : SpoilerOverlay(
-              isSpoiler: isSpoiler,
-              initiallyRevealed: revealSpoilers,
-              spoilerSyncController: _spoilerSyncController,
-              syncKeys: spoilerSyncKeys,
-              child: child,
-            ),
+      child: wrapEmbedSpoiler(
+        type: embed.type,
+        isSpoiler: isSpoiler,
+        revealSpoilers: revealSpoilers,
+        spoilerSyncController: _spoilerSyncController,
+        spoilerSyncKeys: spoilerSyncKeys,
+        child: child,
+      ),
     );
   }
 
