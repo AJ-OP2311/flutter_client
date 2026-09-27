@@ -16,6 +16,7 @@ class BottomInputSlotState {
     required this.lockedHeight,
     required this.panelHeight,
     required this.slotHeight,
+    required this.slotHeightHeld,
   });
 
   final BottomInputMode mode;
@@ -23,6 +24,7 @@ class BottomInputSlotState {
   final double lockedHeight;
   final double panelHeight;
   final double slotHeight;
+  final bool slotHeightHeld;
 }
 
 @Riverpod()
@@ -250,6 +252,7 @@ class BottomInputSlot extends _$BottomInputSlot {
       lockedHeight: resolvedLockedHeight,
       panelHeight: resolvedPanelHeight,
       slotHeight: slotHeight,
+      slotHeightHeld: _heldSlotHeightOverride != null,
     );
   }
 }

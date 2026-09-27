@@ -133,6 +133,18 @@ void main() {
       );
     });
 
+    test('uses zero slot height while held during panel close', () {
+      expect(
+        resolvePanelReservedLayoutHeight(
+          slotHeight: 0,
+          netAnchorHeight: 302,
+          grossAnchorHeight: 336,
+          useExactSlotHeight: true,
+        ),
+        0,
+      );
+    });
+
     test('falls back to gross anchor as last resort', () {
       expect(
         resolvePanelReservedLayoutHeight(

@@ -254,8 +254,9 @@ double resolvePanelReservedLayoutHeight({
   required double slotHeight,
   required double netAnchorHeight,
   required double grossAnchorHeight,
+  bool useExactSlotHeight = false,
 }) {
-  if (slotHeight > 0) {
+  if (useExactSlotHeight || slotHeight > 0) {
     return slotHeight;
   }
   if (netAnchorHeight > 0) {

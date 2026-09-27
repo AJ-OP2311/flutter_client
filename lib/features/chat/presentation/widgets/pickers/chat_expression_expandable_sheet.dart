@@ -56,8 +56,7 @@ class ChatExpressionExpandableSheet extends ConsumerStatefulWidget {
 }
 
 class ChatExpressionExpandableSheetState
-    extends ConsumerState<ChatExpressionExpandableSheet>
-    with SingleTickerProviderStateMixin {
+    extends ConsumerState<ChatExpressionExpandableSheet> {
   final ScrollController _scrollController = ScrollController();
   final VelocityTracker _contentVelocityTracker = VelocityTracker.withKind(
     PointerDeviceKind.touch,
@@ -77,7 +76,7 @@ class ChatExpressionExpandableSheetState
   bool _searchExpandScheduled = false;
   bool _ignoreContentDrag = false;
   double _contentDragSlopAccumulated = 0;
-  AnimationController? _closeSlotAnimationController;
+  Timer? _closeTimer;
   int _lastHandledDismissRequest = 0;
 
   @override
@@ -154,8 +153,7 @@ class ChatExpressionExpandableSheetState
 
   @override
   void dispose() {
-    _closeSlotAnimationController?.dispose();
-    _closeSlotAnimationController = null;
+    _closeTimer?.cancel();
     if (_isClosing) {
       ref.read(bottomInputSlotProvider.notifier).clearHeldSlotHeight();
     }
@@ -421,12 +419,11 @@ class ChatExpressionExpandableSheetState
     }
   }
 
-  void _beginCloseAnimation() {
+  void _beginCloseAnimation({bool playDismissHaptic = true}) {
     if (_isClosing) {
       return;
     }
-    _closeSlotAnimationController?.dispose();
-    _closeSlotAnimationController = null;
+    _closeTimer?.cancel();
 
     final double startContentHeight = _height;
     final double slotHeight = ref.read(bottomInputSlotProvider).slotHeight;
@@ -445,7 +442,18 @@ class ChatExpressionExpandableSheetState
       _isClosing = true;
     });
     _resetDragHaptics();
-    playExpandableSheetDismissHaptic();
+    if (playDismissHaptic) {
+      playExpandableSheetDismissHaptic();
+    }
+
+    if (animateSlotFrom > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_isClosing) {
+          return;
+        }
+        ref.read(bottomInputSlotProvider.notifier).holdSlotHeight(0);
+      });
+    }
 
     final Duration duration = expandableSheetSnapDuration(
       context,
@@ -456,38 +464,17 @@ class ChatExpressionExpandableSheetState
       return;
     }
 
-    final AnimationController controller = AnimationController(
-      vsync: this,
-      duration: duration,
-    );
-    _closeSlotAnimationController = controller;
-    final Animation<double> animation = CurvedAnimation(
-      parent: controller,
-      curve: Curves.easeOutCubic,
-    );
-    if (animateSlotFrom > 0) {
-      animation.addListener(() {
-        if (!mounted) {
-          return;
-        }
-        ref
-            .read(bottomInputSlotProvider.notifier)
-            .holdSlotHeight(animateSlotFrom * (1 - animation.value));
-      });
-    }
-    unawaited(
-      controller.forward().whenComplete(() {
-        if (!mounted) {
-          return;
-        }
-        _completeCloseAnimation();
-      }),
-    );
+    _closeTimer = Timer(duration, () {
+      if (!mounted) {
+        return;
+      }
+      _completeCloseAnimation();
+    });
   }
 
   void _completeCloseAnimation() {
-    _closeSlotAnimationController?.dispose();
-    _closeSlotAnimationController = null;
+    _closeTimer?.cancel();
+    _closeTimer = null;
     if (!mounted) {
       return;
     }
@@ -564,7 +551,7 @@ class ChatExpressionExpandableSheetState
       )) {
         return;
       }
-      _beginCloseAnimation();
+      _beginCloseAnimation(playDismissHaptic: false);
     });
     final colors = context.colors;
     final Color sheetBackground = colors.chatInputBackground;
