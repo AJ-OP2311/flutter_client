@@ -78,15 +78,21 @@ void main() {
     expect(focus.hasFocus, isTrue);
   });
 
-  testWidgets('almost-flat jump stays focused until the next sample', (
-    tester,
-  ) async {
+  testWidgets('clear leftward move keeps the keyboard focused', (tester) async {
     final FocusNode focus = await pumpFocusedField(tester);
     final TestGesture gesture = await tester.startGesture(listCenter(tester));
     await gesture.moveBy(const Offset(-80, 8));
     await tester.pump();
     expect(focus.hasFocus, isTrue);
-    await gesture.moveBy(const Offset(0, 40));
+    await gesture.up();
+    await tester.pump();
+    expect(focus.hasFocus, isTrue);
+  });
+
+  testWidgets('mostly vertical move dismisses the keyboard', (tester) async {
+    final FocusNode focus = await pumpFocusedField(tester);
+    final TestGesture gesture = await tester.startGesture(listCenter(tester));
+    await gesture.moveBy(const Offset(-20, 40));
     await tester.pump();
     expect(focus.hasFocus, isFalse);
     await gesture.up();
