@@ -24,6 +24,9 @@ AckBatcher ackBatcher(Ref ref) {
   ref
     ..listen<bool>(appUiForegroundProvider, (bool? prev, bool next) {
       batcher.setForegroundBatching(foreground: next);
+      if ((prev ?? false) && !next) {
+        unawaited(batcher.flushPending(force: true));
+      }
     }, fireImmediately: true)
     ..listen<bool>(gatewayReadyProvider, (prev, next) {
       if ((prev ?? false) && !next) {
