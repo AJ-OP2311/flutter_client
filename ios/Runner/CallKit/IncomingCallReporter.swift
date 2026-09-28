@@ -143,6 +143,8 @@ final class IncomingCallReporter: NSObject, CXProviderDelegate {
       self.calls.removeAll()
       self.pendingNotify = nil
       self.cancelNotifyRetry()
+      self.terminalRetry?.cancel()
+      self.terminalRetry = nil
       self.callAudioActive = false
     }
   }
@@ -392,7 +394,7 @@ final class IncomingCallReporter: NSObject, CXProviderDelegate {
       cancelNotifyRetry()
     }
     callProvider?.end(uuid: uuid, reason: .unanswered)
-    emit(Self.timeoutEvent, body: eventBody(call, uuid: uuid, accepted: false))
+    emitTerminal(Self.timeoutEvent, body: eventBody(call, uuid: uuid, accepted: false))
   }
 
   private func scheduleAnswerHangup() {

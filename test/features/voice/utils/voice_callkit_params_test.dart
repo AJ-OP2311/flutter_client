@@ -63,4 +63,25 @@ void main() {
     expect(calls.single.extra?['messageId'], 'message');
     expect(callKitParamsFromNativeVoipCalls(null), isEmpty);
   });
+
+  test('native voip calls drop an empty id and a bad extra map', () {
+    final List<CallKitParams> calls = callKitParamsFromNativeVoipCalls(
+      <Object?>[
+        <Object?, Object?>{
+          'id': '',
+          'extra': <Object?, Object?>{'channelId': 'channel'},
+        },
+        <Object?, Object?>{
+          'id': 'ring',
+          'isAccepted': false,
+          'extra': 'channel',
+        },
+      ],
+    );
+
+    expect(calls, hasLength(1));
+    expect(calls.single.id, 'ring');
+    expect(calls.single.isAccepted, isFalse);
+    expect(calls.single.extra, isNull);
+  });
 }
