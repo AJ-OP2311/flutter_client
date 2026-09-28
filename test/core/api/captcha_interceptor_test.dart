@@ -63,32 +63,34 @@ Map<String, dynamic> _challengeResponse() {
 }
 
 void main() {
-  test('passes through when captcha is required without a valid ALTCHA body',
-      () async {
-    final adapter = _CaptchaAdapter(
-      challengeBody: <String, dynamic>{
-        'code': 'CAPTCHA_REQUIRED',
-        'message': 'Verification required.',
-      },
-    );
-    final dio = Dio(BaseOptions(baseUrl: 'https://api.fluxer.app/v1'))
-      ..httpClientAdapter = adapter;
-    dio.interceptors.add(
-      CaptchaInterceptor(dio: dio, showSlowSolveHint: () => () {}),
-    );
+  test(
+    'passes through when captcha is required without a valid ALTCHA body',
+    () async {
+      final adapter = _CaptchaAdapter(
+        challengeBody: <String, dynamic>{
+          'code': 'CAPTCHA_REQUIRED',
+          'message': 'Verification required.',
+        },
+      );
+      final dio = Dio(BaseOptions(baseUrl: 'https://api.fluxer.app/v1'))
+        ..httpClientAdapter = adapter;
+      dio.interceptors.add(
+        CaptchaInterceptor(dio: dio, showSlowSolveHint: () => () {}),
+      );
 
-    await expectLater(
-      dio.post<dynamic>('/auth/login'),
-      throwsA(
-        isA<DioException>().having(
-          (DioException e) => e.response?.statusCode,
-          'statusCode',
-          400,
+      await expectLater(
+        dio.post<dynamic>('/auth/login'),
+        throwsA(
+          isA<DioException>().having(
+            (DioException e) => e.response?.statusCode,
+            'statusCode',
+            400,
+          ),
         ),
-      ),
-    );
-    expect(adapter.requests, hasLength(1));
-  });
+      );
+      expect(adapter.requests, hasLength(1));
+    },
+  );
 
   test('retries with captcha headers after a successful solve', () async {
     final adapter = _CaptchaAdapter(challengeBody: _challengeResponse());
