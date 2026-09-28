@@ -13,10 +13,7 @@ Future<void> drainPushTrayRegistry(PushTrayRegistry registry) async {
     index < entries.length;
     index += kPushTrayDrainBatchSize
   ) {
-    final int end = math.min(
-      index + kPushTrayDrainBatchSize,
-      entries.length,
-    );
+    final int end = math.min(index + kPushTrayDrainBatchSize, entries.length);
     for (final MapEntry<String, String> entry in entries.sublist(index, end)) {
       await PushNotificationClear.cancelForChannel(
         entry.key,

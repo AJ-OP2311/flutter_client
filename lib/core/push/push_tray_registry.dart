@@ -36,9 +36,7 @@ final class PushTrayRegistry {
   void markForegroundPushSuppressed(Map<String, String> payload) {
     final String? channelId = resolvePushChannelId(payload);
     final String? messageId = payload['message_id'];
-    if (channelId == null ||
-        messageId == null ||
-        messageId.isEmpty) {
+    if (channelId == null || messageId == null || messageId.isEmpty) {
       return;
     }
     markChannelRead(channelId, messageId);
@@ -48,8 +46,8 @@ final class PushTrayRegistry {
     if (_readThroughByChannel.isEmpty) {
       return const <MapEntry<String, String>>[];
     }
-    final List<MapEntry<String, String>> entries =
-        _readThroughByChannel.entries.toList(growable: false);
+    final List<MapEntry<String, String>> entries = _readThroughByChannel.entries
+        .toList(growable: false);
     _readThroughByChannel.clear();
     _insertionOrder.clear();
     return entries;
