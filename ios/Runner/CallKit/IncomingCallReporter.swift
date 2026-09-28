@@ -97,14 +97,14 @@ final class IncomingCallReporter: NSObject, CXProviderDelegate {
         completion: completion
       )
     case .reject(let messageId):
-      NSLog("[CallKit] voip push kept on screen without a parsed ring")
+      NSLog("[CallKit] voip push was not a live ring")
       let uuid = messageId.map { CallRingUuid.v5(name: $0) } ?? UUID()
       report(
         uuid: uuid,
-        name: CallRingResolver.fallbackName,
+        name: CallRingResolver.fallbackHandle,
         handle: CallRingResolver.fallbackHandle,
         fields: nil,
-        endAfterReport: false,
+        endAfterReport: true,
         completion: completion
       )
     }
