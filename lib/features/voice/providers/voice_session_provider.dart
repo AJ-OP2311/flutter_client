@@ -30,6 +30,7 @@ import 'package:fluxer_app/features/voice/providers/local_voice_state_provider.d
 import 'package:fluxer_app/features/voice/providers/screen_share_capability_provider.dart';
 import 'package:fluxer_app/features/voice/providers/voice_call_display_preferences_provider.dart';
 import 'package:fluxer_app/features/voice/providers/voice_call_layout_provider.dart';
+import 'package:fluxer_app/features/voice/providers/voice_callkit_engine_gate_provider.dart';
 import 'package:fluxer_app/features/voice/providers/voice_channel_participants_provider.dart';
 import 'package:fluxer_app/features/voice/providers/voice_channel_permissions_provider.dart';
 import 'package:fluxer_app/features/voice/providers/voice_join_eligibility_provider.dart';
@@ -49,6 +50,7 @@ import 'package:fluxer_app/features/voice/utils/voice_channel_permissions.dart';
 import 'package:fluxer_app/features/voice/utils/voice_connection_voice_state.dart';
 import 'package:fluxer_app/features/voice/utils/voice_effective_audio_state.dart';
 import 'package:fluxer_app/features/voice/utils/voice_join_timing.dart';
+import 'package:fluxer_app/features/voice/utils/voice_lifecycle_log.dart';
 import 'package:fluxer_app/features/voice/utils/voice_participant_volume_utils.dart';
 import 'package:fluxer_app/features/voice/utils/voice_server_update_decision.dart';
 import 'package:fluxer_app/features/voice/voice_session_errors.dart';
@@ -151,6 +153,28 @@ class VoiceSession extends _$VoiceSession {
           return;
         }
         unawaited(_onVoiceSettingsChanged(previous, next));
+      })
+      ..listen<bool>(voiceCallKitEngineSuppressedProvider, (
+        bool? previous,
+        bool next,
+      ) {
+        if (previous != true || next) {
+          return;
+        }
+        if (!state.isInVoice) {
+          return;
+        }
+        unawaited(
+          _reconcileRemoteAudioForSelfConnection(
+            reason: 'callkit_engine_restored',
+          ),
+        );
+        unawaited(
+          _reconcileLocalAudioPublish(
+            reason: 'callkit_engine_restored',
+            attempt: _connectGeneration,
+          ),
+        );
       });
     return const VoiceSessionState();
   }
@@ -199,6 +223,16 @@ class VoiceSession extends _$VoiceSession {
   }
 
   bool _hasLiveKitRoom() => state.liveKitRoom != null;
+
+  bool _shouldDeferWebRtcMediaWork(String operation) {
+    if (!readVoiceWebRtcEngineSuppressed(ref)) {
+      return false;
+    }
+    talker.debug(
+      '[Voice] Deferred $operation: CallKit WebRTC engine suppressed.',
+    );
+    return true;
+  }
 
   bool _hasLiveConnectionToChannel(String channelId) {
     return voiceSessionHasLiveConnection(
@@ -547,6 +581,12 @@ class VoiceSession extends _$VoiceSession {
     _pendingSelfMute = resolvedSelfMute;
     _pendingSelfDeaf = resolvedSelfDeaf;
     _connectGeneration++;
+    logVoiceLifecycle(
+      'connect_requested',
+      connectGeneration: _connectGeneration,
+      channelId: channelId,
+      reason: forceJoin ? 'force_join' : 'join',
+    );
     _voiceMovePreviousChannelId =
         state.isConnected &&
             state.channelId != null &&
@@ -1224,13 +1264,23 @@ class VoiceSession extends _$VoiceSession {
         );
         _detachRoomEventsListener();
         _detachLocalParticipantListener();
-        unawaited(room.disconnect());
+        logVoiceLifecycle(
+          'livekit_connect_superseded',
+          connectGeneration: _connectGeneration,
+          channelId: resolvedChannelId,
+          connectionId: event.connectionId,
+          reason: 'superseded_after_connect',
+          connectionState: room.connectionState.name,
+        );
         if (identical(_managedLiveKitRoom, room)) {
           _managedLiveKitRoom = null;
         }
         if (identical(state.liveKitRoom, room)) {
           state = state.copyWith(clearRoom: true);
         }
+        unawaited(
+          _disconnectAndDisposeRoom(room, reason: 'superseded_after_connect'),
+        );
         return;
       }
       if (room.connectionState == ConnectionState.connected) {
@@ -1321,6 +1371,12 @@ class VoiceSession extends _$VoiceSession {
     if (attempt != _connectGeneration) {
       return;
     }
+    logVoiceLifecycle(
+      'region_hotswap_start',
+      connectGeneration: attempt,
+      channelId: resolvedChannelId,
+      connectionId: event.connectionId,
+    );
     await _abortRegionHotSwap();
     final VoiceSettingsState voiceSettings = ref.read(voiceSettingsProvider);
     final VoiceSettingsApplicator applicator = ref.read(
@@ -1464,15 +1520,10 @@ class VoiceSession extends _$VoiceSession {
   }
 
   Future<void> _disconnectRegionHotSwapPreviousRoom(Room previousRoom) async {
-    _intentionalLiveKitTeardown = true;
-    try {
-      await _disconnectAndDisposeRoom(
-        previousRoom,
-        reason: 'region_hotswap_previous',
-      );
-    } finally {
-      _intentionalLiveKitTeardown = false;
-    }
+    await _disconnectAndDisposeRoom(
+      previousRoom,
+      reason: 'region_hotswap_previous',
+    );
   }
 
   Future<void> _ringAfterConnect(
@@ -1584,13 +1635,19 @@ class VoiceSession extends _$VoiceSession {
         leaveCompleter.complete();
       }
       _leaveVoiceInFlight = null;
-      _intentionalLiveKitTeardown = false;
     }
   }
 
   Future<void> _leaveVoiceImpl({required bool endCall}) async {
     _joinTiming = null;
     _intentionalLiveKitTeardown = true;
+    logVoiceLifecycle(
+      'leave_voice',
+      connectGeneration: _connectGeneration,
+      channelId: state.channelId,
+      connectionId: state.activeConnectionId,
+      reason: endCall ? 'end_call' : 'leave_only',
+    );
     _cancelConnectWatchdog();
     _cancelLiveKitConnectWatchdog();
     _cancelRegionHotSwapTimeout();
@@ -1654,11 +1711,19 @@ class VoiceSession extends _$VoiceSession {
 
   void _teardownOnDispose() {
     // Prevent stale in-flight connects from creating a room after disposal.
+    _intentionalLiveKitTeardown = true;
     _connectGeneration++;
+    logVoiceLifecycle(
+      'session_provider_dispose',
+      connectGeneration: _connectGeneration,
+      channelId: state.channelId,
+      connectionId: state.activeConnectionId,
+      reason: 'teardown_on_dispose',
+    );
     _cancelConnectWatchdog();
     _cancelLiveKitConnectWatchdog();
     _cancelRegionHotSwapTimeout();
-    _regionHotSwapPendingRoom = null;
+    unawaited(_abortRegionHotSwap());
     _cancelDeferredServerDisconnect();
     _cancelSpeakerOutputRetry();
     _detachMediaDeviceChangeListener();
@@ -2399,6 +2464,14 @@ class VoiceSession extends _$VoiceSession {
     if (!_isLatestRoomAttempt(attempt)) {
       return;
     }
+    _intentionalLiveKitTeardown = false;
+    logVoiceLifecycle(
+      'livekit_room_connected',
+      connectGeneration: attempt,
+      channelId: resolvedChannelId,
+      connectionId: connectionId,
+      connectionState: room.connectionState.name,
+    );
     _cancelLiveKitConnectWatchdog();
     if (state.isConnected && state.channelId == resolvedChannelId) {
       unawaited(
@@ -2560,6 +2633,9 @@ class VoiceSession extends _$VoiceSession {
   }
 
   Future<void> _setSessionMicrophoneEnabled({required bool enabled}) async {
+    if (_shouldDeferWebRtcMediaWork('microphone_publish')) {
+      return;
+    }
     final Room? room = state.liveKitRoom;
     if (room == null) {
       return;
@@ -2775,6 +2851,9 @@ class VoiceSession extends _$VoiceSession {
     if (publication.source != TrackSource.microphone) {
       return;
     }
+    if (_shouldDeferWebRtcMediaWork('remote_audio_subscribe')) {
+      return;
+    }
     if (_effectiveAudioStateForSelfConnection().effectiveDeaf) {
       return;
     }
@@ -2796,6 +2875,9 @@ class VoiceSession extends _$VoiceSession {
       return;
     }
     if (!state.isConnected && !state.isConnecting) {
+      return;
+    }
+    if (_shouldDeferWebRtcMediaWork('reconcile_remote_audio')) {
       return;
     }
     final List<Future<void>> pending = <Future<void>>[];
