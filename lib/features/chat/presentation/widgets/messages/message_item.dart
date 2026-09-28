@@ -420,6 +420,12 @@ class _MessageItemState extends ConsumerState<MessageItem> {
         widget.message.type == messageTypeReply;
   }
 
+  String? _guildIdForMessageActions() {
+    return widget.previewRoleGuildId ??
+        widget.renderSettings?.activeGuildId ??
+        resolveGuildIdForChannel(ref, widget.message.channelId);
+  }
+
   void _dispatchQuickReaction(QuickReactionItem item) {
     // Frecency is tracked centrally in ChatViewModel.toggleReaction, so the
     // quick-row tap only needs to fire the reaction.
@@ -443,8 +449,7 @@ class _MessageItemState extends ConsumerState<MessageItem> {
           : null;
       FluxerHaptics.medium();
       final VoidCallback? onDelete = widget.onDelete;
-      final String? guildId =
-          widget.previewRoleGuildId ?? ref.read(contextualGuildIdProvider);
+      final String? guildId = _guildIdForMessageActions();
       final MessageAction? action = await showMessageBottomSheet(
         context,
         message: widget.message,
@@ -475,8 +480,7 @@ class _MessageItemState extends ConsumerState<MessageItem> {
   }
 
   Future<void> _showContextMenu(BuildContext context, Offset position) async {
-    final String? guildId =
-        widget.previewRoleGuildId ?? ref.read(contextualGuildIdProvider);
+    final String? guildId = _guildIdForMessageActions();
     final VoidCallback? onDelete = widget.onDelete;
     final MessageAction? action = await showMessageContextMenu(
       context,
