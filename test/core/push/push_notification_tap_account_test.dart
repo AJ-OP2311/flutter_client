@@ -57,7 +57,9 @@ void main() {
         authTokenStorageProvider.overrideWithValue(tokens),
         authRepositoryProvider.overrideWithValue(
           AuthRepository(
-            FluxerClient(Dio(BaseOptions(baseUrl: 'https://fluxer.com/api/v1'))),
+            FluxerClient(
+              Dio(BaseOptions(baseUrl: 'https://fluxer.com/api/v1')),
+            ),
             db,
             tokens,
             readInstanceSnapshot: InstanceConfigSnapshot.officialDefault,
@@ -95,7 +97,9 @@ void main() {
         authTokenStorageProvider.overrideWithValue(tokens),
         authRepositoryProvider.overrideWithValue(
           AuthRepository(
-            FluxerClient(Dio(BaseOptions(baseUrl: 'https://fluxer.com/api/v1'))),
+            FluxerClient(
+              Dio(BaseOptions(baseUrl: 'https://fluxer.com/api/v1')),
+            ),
             db,
             tokens,
             readInstanceSnapshot: InstanceConfigSnapshot.officialDefault,
