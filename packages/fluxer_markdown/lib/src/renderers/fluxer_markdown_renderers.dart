@@ -705,6 +705,7 @@ class _MarkdownBlockRenderer {
     TextStyle? style,
     TextAlign? textAlign,
     Widget? trailingInlineWidget,
+    String emptySpanPlaceholder = '\n',
   }) {
     final effectiveStyle = style ?? baseStyle;
     final spans = _MarkdownInlineRenderer(
@@ -725,7 +726,7 @@ class _MarkdownBlockRenderer {
         return trailingInlineWidget;
       }
       return buildFluxerBoundedRichText(
-        text: TextSpan(text: '\n', style: effectiveStyle),
+        text: TextSpan(text: emptySpanPlaceholder, style: effectiveStyle),
         baseStyle: effectiveStyle,
         textAlign: textAlign ?? TextAlign.start,
         textScaler: MediaQuery.textScalerOf(context),
@@ -1179,6 +1180,7 @@ class _MarkdownBlockRenderer {
         cell.children ?? const [],
         style: cellStyle,
         textAlign: textAlign,
+        emptySpanPlaceholder: ' ',
       ),
     );
   }

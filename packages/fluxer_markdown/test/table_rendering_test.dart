@@ -410,6 +410,52 @@ void main() {
       );
     });
 
+    testWidgets('empty body cells keep the same row height as populated rows', (
+      tester,
+    ) async {
+      const String input = '''
+| A | B | C |
+| --- | --- | --- |
+| one | two | three |
+|  | two | three |
+|   | two | three |
+| one | two |''';
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: FluxerMarkdown(
+              astParser: parseTestMarkdownAst,
+              data: input,
+              config: _testMarkdownConfig,
+              baseStyle: _baseStyle,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final Finder oddRowCells = _tableCellWithColor(_rowOddBackgroundColor);
+      final Finder evenRowCells = _tableCellWithColor(_rowEvenBackgroundColor);
+      expect(oddRowCells, findsNWidgets(6));
+      expect(evenRowCells, findsNWidgets(6));
+
+      final List<double> rowHeights = <double>[
+        tester.getSize(oddRowCells.at(0)).height,
+        tester.getSize(evenRowCells.at(0)).height,
+        tester.getSize(oddRowCells.at(3)).height,
+        tester.getSize(evenRowCells.at(3)).height,
+      ];
+      for (var i = 1; i < rowHeights.length; i++) {
+        expect(
+          rowHeights[i],
+          closeTo(rowHeights[0], 1),
+          reason:
+              'body rows with empty or missing cells should match full rows',
+        );
+      }
+    });
+
     testWidgets('wide emoji table renders with visible height', (tester) async {
       const String input = '''
 | hello | this is quite a nice table | yeah | :pinched_fingers:  |
