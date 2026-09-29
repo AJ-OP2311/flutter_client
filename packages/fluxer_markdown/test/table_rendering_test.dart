@@ -170,7 +170,7 @@ void main() {
       ]);
     });
 
-    testWidgets('wraps table in rounded border container', (tester) async {
+    testWidgets('wraps table in rounded clip and border', (tester) async {
       const String input = '''
 | Header | Value |
 | --- | --- |
@@ -189,25 +189,19 @@ void main() {
         ),
       );
 
-      final Container tableContainer = tester.widget<Container>(
+      final ClipRRect clip = tester.widget<ClipRRect>(
         find.descendant(
           of: find.byType(SingleChildScrollView),
-          matching: find.byWidgetPredicate(
-            (Widget widget) =>
-                widget is Container &&
-                widget.decoration is BoxDecoration &&
-                (widget.decoration! as BoxDecoration).border != null,
-          ),
+          matching: find.byType(ClipRRect),
         ),
       );
-      final BoxDecoration decoration =
-          tableContainer.decoration! as BoxDecoration;
+      expect(clip.borderRadius, const BorderRadius.all(Radius.circular(6)));
+      final Table table = tester.widget<Table>(find.byType(Table));
       expect(
-        decoration.borderRadius,
+        table.border?.borderRadius,
         const BorderRadius.all(Radius.circular(6)),
       );
-      expect(decoration.border?.top.color, _tableBorderColor);
-      final Table table = tester.widget<Table>(find.byType(Table));
+      expect(table.border?.top.color, _tableBorderColor);
       expect(table.border?.horizontalInside.color, _tableBorderColor);
     });
 

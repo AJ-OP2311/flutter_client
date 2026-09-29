@@ -1130,24 +1130,27 @@ class _MarkdownBlockRenderer {
     final Map<int, TableColumnWidth> columnWidths = <int, TableColumnWidth>{
       for (int i = 0; i < columnCount; i++) i: const IntrinsicColumnWidth(),
     };
-    final Widget tableWidget = Table(
-      defaultVerticalAlignment: TableCellVerticalAlignment.intrinsicHeight,
-      columnWidths: columnWidths,
-      border: TableBorder(horizontalInside: borderSide),
-      children: tableRows,
+    final Widget tableWidget = ClipRRect(
+      borderRadius: borderRadius,
+      child: Table(
+        defaultVerticalAlignment: TableCellVerticalAlignment.intrinsicHeight,
+        columnWidths: columnWidths,
+        border: TableBorder(
+          top: borderSide,
+          left: borderSide,
+          right: borderSide,
+          bottom: borderSide,
+          horizontalInside: borderSide,
+          borderRadius: borderRadius,
+        ),
+        children: tableRows,
+      ),
     );
     return Padding(
       padding: EdgeInsets.only(bottom: baseFontSize * 0.75),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: borderColor),
-            borderRadius: borderRadius,
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: tableWidget,
-        ),
+        child: tableWidget,
       ),
     );
   }
